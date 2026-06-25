@@ -371,12 +371,15 @@
                     :key="f.key"
                     :label="$t(f.label)"
                   >
-                    <el-input-number
-                      v-model="newProject.baseParams[f.key]"
-                      :precision="f.precision"
-                      :step="f.step"
-                      controls-position="right"
-                    />
+                    <div class="input-with-unit">
+                      <el-input-number
+                        v-model="newProject.baseParams[f.key]"
+                        :precision="f.precision"
+                        :step="f.step"
+                        controls-position="right"
+                      />
+                      <span class="field-unit" v-if="f.unit">{{ f.unit }}</span>
+                    </div>
                   </el-form-item>
                 </el-col>
                 <el-col :span="12">
@@ -388,12 +391,15 @@
                     :key="f.key"
                     :label="$t(f.label)"
                   >
-                    <el-input-number
-                      v-model="newProject.baseParams[f.key]"
-                      :precision="f.precision"
-                      :step="f.step"
-                      controls-position="right"
-                    />
+                    <div class="input-with-unit">
+                      <el-input-number
+                        v-model="newProject.baseParams[f.key]"
+                        :precision="f.precision"
+                        :step="f.step"
+                        controls-position="right"
+                      />
+                      <span class="field-unit" v-if="f.unit">{{ f.unit }}</span>
+                    </div>
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -419,11 +425,14 @@
                     :key="'s1' + f.key"
                     :label="$t(f.label)"
                   >
-                    <el-input-number
-                      v-model="newProject.baseParams.stage1[f.key]"
-                      :precision="f.precision"
-                      controls-position="right"
-                    />
+                    <div class="input-with-unit">
+                      <el-input-number
+                        v-model="newProject.baseParams.stage1[f.key]"
+                        :precision="f.precision"
+                        controls-position="right"
+                      />
+                      <span class="field-unit" v-if="f.unit">{{ f.unit }}</span>
+                    </div>
                   </el-form-item>
                 </el-col>
                 <el-col :span="12">
@@ -437,11 +446,14 @@
                     :key="'s2' + f.key"
                     :label="$t(f.label)"
                   >
-                    <el-input-number
-                      v-model="newProject.baseParams.stage2[f.key]"
-                      :precision="f.precision"
-                      controls-position="right"
-                    />
+                    <div class="input-with-unit">
+                      <el-input-number
+                        v-model="newProject.baseParams.stage2[f.key]"
+                        :precision="f.precision"
+                        controls-position="right"
+                      />
+                      <span class="field-unit" v-if="f.unit">{{ f.unit }}</span>
+                    </div>
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -465,12 +477,15 @@
                     :key="f.key"
                     :label="$t(f.label)"
                   >
-                    <el-input-number
-                      v-model="newProject.baseParams[f.key]"
-                      :precision="f.precision"
-                      :step="f.step"
-                      controls-position="right"
-                    />
+                    <div class="input-with-unit">
+                      <el-input-number
+                        v-model="newProject.baseParams[f.key]"
+                        :precision="f.precision"
+                        :step="f.step"
+                        controls-position="right"
+                      />
+                      <span class="field-unit" v-if="f.unit">{{ f.unit }}</span>
+                    </div>
                   </el-form-item>
                 </el-col>
                 <el-col :span="12">
@@ -482,11 +497,14 @@
                     :key="f.key"
                     :label="$t(f.label)"
                   >
-                    <el-input-number
-                      v-model="newProject.baseParams[f.key]"
-                      :step="f.step"
-                      controls-position="right"
-                    />
+                    <div class="input-with-unit">
+                      <el-input-number
+                        v-model="newProject.baseParams[f.key]"
+                        :step="f.step"
+                        controls-position="right"
+                      />
+                      <span class="field-unit" v-if="f.unit">{{ f.unit }}</span>
+                    </div>
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -610,7 +628,12 @@
                       :class="{ 'is-highlight': item.isHighlight }"
                     >
                       <div class="cp-label">{{ item.key }}</div>
-                      <div class="cp-val">{{ item.val }}</div>
+                      <div class="cp-val">
+                        <span class="cp-v-num">{{ item.val }}</span>
+                        <span class="cp-v-unit" v-if="item.unit">{{
+                          item.unit
+                        }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -824,7 +847,12 @@
                           :key="i"
                         >
                           <div class="cp-label">{{ item.key }}</div>
-                          <div class="cp-val">{{ item.val }}</div>
+                          <div class="cp-val">
+                            <span class="cp-v-num">{{ item.val }}</span>
+                            <span class="cp-v-unit" v-if="item.unit">{{
+                              item.unit
+                            }}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -984,35 +1012,85 @@ const PAGE_STEP = 15;
 const SEARCH_DEBOUNCE_MS = 200;
 
 const LAUNCH_FIELDS = [
-  { key: "longitude", label: "params.labels.lon", precision: 4, step: 0.1 },
-  { key: "latitude", label: "params.labels.lat", precision: 4, step: 0.1 },
-  { key: "azimuth", label: "params.labels.az", precision: 4, step: 1 },
-  { key: "altitude", label: "params.labels.alt", precision: 0, step: 10 },
+  {
+    key: "longitude",
+    label: "params.labels.lon",
+    precision: 4,
+    step: 0.1,
+    unit: "deg",
+  },
+  {
+    key: "latitude",
+    label: "params.labels.lat",
+    precision: 4,
+    step: 0.1,
+    unit: "deg",
+  },
+  {
+    key: "azimuth",
+    label: "params.labels.az",
+    precision: 4,
+    step: 1,
+    unit: "deg",
+  },
+  {
+    key: "altitude",
+    label: "params.labels.alt",
+    precision: 0,
+    step: 10,
+    unit: "m",
+  },
 ];
 const STRUCT_FIELDS = [
-  { key: "length", label: "params.labels.len", precision: 2, step: 0.5 },
+  {
+    key: "length",
+    label: "params.labels.len",
+    precision: 2,
+    step: 0.5,
+    unit: "m",
+  },
   {
     key: "fairingMass",
     label: "params.labels.fairing",
     precision: 0,
     step: 10,
+    unit: "kg",
   },
-  { key: "loadMass", label: "params.labels.load", precision: 0, step: 10 },
-  { key: "diameter", label: "params.labels.dia", precision: 2, step: 0.1 },
+  {
+    key: "loadMass",
+    label: "params.labels.load",
+    precision: 0,
+    step: 10,
+    unit: "kg",
+  },
+  {
+    key: "diameter",
+    label: "params.labels.dia",
+    precision: 2,
+    step: 0.1,
+    unit: "m",
+  },
 ];
 const STAGE_FIELDS = [
-  { key: "structMass", label: "params.labels.struct" },
-  { key: "oxMass", label: "params.labels.ox" },
-  { key: "fuelMass", label: "params.labels.fuel" },
-  { key: "tankOxMass", label: "params.labels.tankOx" },
-  { key: "tankFuelMass", label: "params.labels.tankFuel" },
-  { key: "Isp", label: "params.labels.Isp" },
-  { key: "mixingRatio", label: "params.labels.mix", precision: 2 },
-  { key: "totalConsumption", label: "params.labels.consume" },
-  { key: "enginesNum", label: "params.labels.engineNum" },
-  { key: "thrust", label: "params.labels.thrust" },
-  { key: "nozzleArea", label: "params.labels.nozzle", precision: 3 },
-  { key: "mountingAngle", label: "params.labels.mountAngle", precision: 2 },
+  { key: "structMass", label: "params.labels.struct", unit: "kg" },
+  { key: "oxMass", label: "params.labels.ox", unit: "kg" },
+  { key: "fuelMass", label: "params.labels.fuel", unit: "kg" },
+  { key: "Isp", label: "params.labels.Isp", unit: "m/s" },
+  { key: "mixingRatio", label: "params.labels.mix", precision: 2, unit: " " },
+  { key: "enginesNum", label: "params.labels.engineNum", unit: " " },
+  { key: "thrust", label: "params.labels.thrust", unit: "kN" },
+  {
+    key: "nozzleArea",
+    label: "params.labels.nozzle",
+    precision: 3,
+    unit: "m²",
+  },
+  {
+    key: "mountingAngle",
+    label: "params.labels.mountAngle",
+    precision: 2,
+    unit: "deg",
+  },
 ];
 const ORBIT_FIELDS = [
   {
@@ -1020,26 +1098,29 @@ const ORBIT_FIELDS = [
     label: "params.labels.trackHeight",
     precision: 0,
     step: 10,
+    unit: "km",
   },
   {
     key: "eccentricity",
     label: "params.labels.ecc",
     precision: 4,
     step: 0.001,
+    unit: " ",
   },
   {
     key: "trackInclination",
     label: "params.labels.trackInc",
     precision: 3,
     step: 1,
+    unit: "deg",
   },
 ];
 const TIME_FIELDS = [
-  { key: "time1", label: "params.labels.t1", step: 1 },
-  { key: "time2", label: "params.labels.t2", step: 0.5 },
-  { key: "time3", label: "params.labels.t3", step: 1 },
-  { key: "time4", label: "params.labels.t4", step: 1 },
-  { key: "time5", label: "params.labels.t5", step: 1 },
+  { key: "time1", label: "params.labels.t1", step: 1, unit: " " },
+  { key: "time2", label: "params.labels.t2", step: 0.5, unit: " " },
+  { key: "time3", label: "params.labels.t3", step: 1, unit: " " },
+  { key: "time4", label: "params.labels.t4", step: 1, unit: " " },
+  { key: "time5", label: "params.labels.t5", step: 1, unit: " " },
 ];
 
 const WIZARD_STEPS = [
@@ -1065,12 +1146,9 @@ const LABEL_DICT_KEYS = {
   diameter: "params.labels.dia",
   structMass: "params.labels.struct",
   oxMass: "params.labels.ox",
-  tankOxMass: "params.labels.tankOx",
   fuelMass: "params.labels.fuel",
-  tankFuelMass: "params.labels.tankFuel",
   Isp: "params.labels.Isp",
   mixingRatio: "params.labels.mix",
-  totalConsumption: "params.labels.consume",
   enginesNum: "params.labels.engineNum",
   thrust: "params.labels.thrust",
   nozzleArea: "params.labels.nozzle",
@@ -1093,6 +1171,39 @@ const LABEL_DICT_KEYS = {
   slope1: "params.labels.initSlope1",
   slope2: "params.labels.initSlope2",
   finalShutdown: "params.labels.initTime",
+};
+
+const UNIT_DICT = {
+  longitude: "deg",
+  latitude: "deg",
+  azimuth: "deg",
+  altitude: "m",
+  length: "m",
+  fairingMass: "kg",
+  loadMass: "kg",
+  diameter: "m",
+  structMass: "kg",
+  oxMass: "kg",
+  fuelMass: "kg",
+  Isp: "m/s",
+  mixingRatio: " ",
+  enginesNum: " ",
+  thrust: "kN",
+  nozzleArea: "m²",
+  mountingAngle: "deg",
+  trackHeight: "km",
+  eccentricity: " ",
+  trackInclination: "deg",
+  time1: " ",
+  time2: " ",
+  time3: " ",
+  time4: " ",
+  time5: " ",
+  errSemiMajorAxis: "m",
+  errInclination: "deg",
+  launchAzimuth: "deg",
+  attackAngle: "deg",
+  finalShutdown: "s",
 };
 
 const FLAT_CACHE = new WeakMap();
@@ -1119,11 +1230,8 @@ function defaultBaseParams() {
       structMass: 11612.7,
       oxMass: 115179.729,
       fuelMass: 41483.442,
-      tankOxMass: 113911.395,
-      tankFuelMass: 41368.47,
       Isp: 2840.909,
       mixingRatio: 2.8034,
-      totalConsumption: 897.6,
       enginesNum: 4,
       thrust: 637.5,
       nozzleArea: 0.611,
@@ -1133,11 +1241,8 @@ function defaultBaseParams() {
       structMass: 3092.5,
       oxMass: 21800.6605,
       fuelMass: 7449.582,
-      tankOxMass: 21741.245,
-      tankFuelMass: 7438.86,
       Isp: 3428.169,
       mixingRatio: 3.0341,
-      totalConsumption: 71,
       enginesNum: 2,
       thrust: 121.7,
       nozzleArea: 0.859,
@@ -1364,7 +1469,7 @@ export default {
               nextPrefix = t("params.groups.init");
             walk(val, nextPrefix);
           } else {
-            flat.push({ key: fullLabel, val });
+            flat.push({ key: fullLabel, val, unit: UNIT_DICT[k] || "" });
           }
         }
       };
@@ -1424,7 +1529,7 @@ export default {
         list.push({
           label: t("project.optParams.launchAzimuth"),
           value: params[0].toFixed(3),
-          unit: "°",
+          unit: "deg",
         });
       if (params.length > 1)
         list.push({
@@ -1436,7 +1541,7 @@ export default {
         list.push({
           label: t("params.labels.initAttack"),
           value: params[2].toFixed(3),
-          unit: "°",
+          unit: "deg",
         });
       if (params.length > 3)
         list.push({
@@ -1606,7 +1711,6 @@ export default {
       const fileName = `RocketSim_${safe}_Report.pdf`;
       const t = (k) => this.$t(k);
 
-      // 1. 报表头部信息
       let html = `<div style="font-family:'Helvetica Neue',Helvetica,'PingFang SC',sans-serif;padding:20px;color:#1e293b;background:#fff">
         <h1 style="text-align:center;color:#0f172a;border-bottom:2px solid #0ea5e9;padding-bottom:10px;margin-bottom:20px;letter-spacing:2px">${t(
           "project.export.reportTitle",
@@ -1630,7 +1734,6 @@ export default {
           }
         </div>`;
 
-      // 2. 基础配置部分 (全项目统一)
       if (proj.baseParams) {
         html += `<div style="margin-bottom:30px">
           <h2 style="background:#334155;color:#fff;padding:8px 15px;border-radius:4px;font-size:15px;margin-bottom:12px">// ${t(
@@ -1646,15 +1749,24 @@ export default {
               <td style="border:1px solid #cbd5e1;background:#f1f5f9;padding:6px;width:25%;color:#475569">${
                 p1.key
               }</td>
-              <td style="border:1px solid #cbd5e1;padding:6px;width:25%;color:#0f172a;font-weight:bold">${
-                p1.val
-              }</td>
+              <td style="border:1px solid #cbd5e1;padding:6px;width:25%;color:#0f172a;font-weight:bold">
+                ${p1.val} <span style="font-size:9px;color:#64748b">${
+              p1.unit || ""
+            }</span>
+              </td>
               <td style="border:1px solid #cbd5e1;background:#f1f5f9;padding:6px;width:25%;color:#475569">${
                 p2 ? p2.key : ""
               }</td>
-              <td style="border:1px solid #cbd5e1;padding:6px;width:25%;color:#0f172a;font-weight:bold">${
-                p2 ? p2.val : ""
-              }</td>
+              <td style="border:1px solid #cbd5e1;padding:6px;width:25%;color:#0f172a;font-weight:bold">
+                ${
+                  p2
+                    ? p2.val +
+                      ' <span style="font-size:9px;color:#64748b">' +
+                      (p2.unit || "") +
+                      "</span>"
+                    : ""
+                }
+              </td>
             </tr>`;
           }
           html += `</tbody></table>`;
@@ -1692,15 +1804,24 @@ export default {
                 <td style="border:1px solid #e2e8f0;background:#f8fafc;padding:5px;width:25%">${
                   p1.key
                 }</td>
-                <td style="border:1px solid #e2e8f0;padding:5px;width:25%;font-weight:bold">${
-                  p1.val
-                }</td>
+                <td style="border:1px solid #e2e8f0;padding:5px;width:25%;font-weight:bold">
+                  ${p1.val} <span style="font-size:8px;color:#64748b">${
+                p1.unit || ""
+              }</span>
+                </td>
                 <td style="border:1px solid #e2e8f0;background:#f8fafc;padding:5px;width:25%">${
                   p2 ? p2.key : ""
                 }</td>
-                <td style="border:1px solid #e2e8f0;padding:5px;width:25%;font-weight:bold">${
-                  p2 ? p2.val : ""
-                }</td>
+                <td style="border:1px solid #e2e8f0;padding:5px;width:25%;font-weight:bold">
+                  ${
+                    p2
+                      ? p2.val +
+                        ' <span style="font-size:8px;color:#64748b">' +
+                        (p2.unit || "") +
+                        "</span>"
+                      : ""
+                  }
+                </td>
               </tr>`;
             }
             html += `</tbody></table>`;
@@ -2910,7 +3031,6 @@ export default {
   opacity: 0;
 }
 
-/* 改造后的超级宽抽屉 */
 .drawer.drawer-wide {
   width: 880px;
 }
@@ -2926,7 +3046,6 @@ export default {
   flex-direction: column;
 }
 
-/* 抽屉内双引擎 Tabs */
 .drawer-tabs {
   display: flex;
   padding: 0 26px;
@@ -3538,24 +3657,35 @@ export default {
   font-weight: 700;
   border-right-color: rgba(0, 229, 255, 0.3);
 }
+
+/* === 修改这里：数字与悬浮单位分离 === */
 .cp-val {
   flex: 1;
   padding: 10px 14px;
   color: var(--cyan);
-  font-family: var(--font-mono);
-  font-size: 14px;
-  font-weight: 700;
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  gap: 5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   transition: all 0.3s ease;
 }
-.cp-item.is-highlight .cp-val {
+.cp-v-num {
+  font-family: var(--font-hud);
+  font-size: 15px;
+  font-weight: 800;
+}
+.cp-v-unit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  opacity: 0.6;
+}
+.cp-item.is-highlight .cp-v-num {
   color: #fff;
   text-shadow: 0 0 8px var(--cyan);
 }
+
 .drawer-body {
   flex: 1;
   overflow-y: auto;
@@ -3578,5 +3708,22 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.input-with-unit .el-input-number {
+  flex: 1;
+}
+.field-unit {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #5a8aaa;
+  width: 24px;
+  flex-shrink: 0;
+  text-align: left;
 }
 </style>

@@ -286,20 +286,9 @@ import { mapState } from "vuex";
 import * as echarts from "echarts";
 import { TELEMETRY_COLUMNS, PARAM_GROUPS } from "@/utils/telemetryColumns";
 
-const DOWNSAMPLE_THRESHOLD = 2000;
 const CHART_COLORS = ["#00e5ff", "#39ff14", "#ff6b6b", "#ffd93d", "#fb923c"];
 const RECORD_COLORS = ["#00e5ff", "#c084fc", "#39ff14"];
 const LINE_DASHES = ["solid", "dashed", "dotted"];
-
-function downsample(data, maxPoints) {
-  if (data.length <= maxPoints) return data;
-  const step = Math.ceil(data.length / maxPoints);
-  const result = [];
-  for (let i = 0; i < data.length; i += step) result.push(data[i]);
-  if (result[result.length - 1] !== data[data.length - 1])
-    result.push(data[data.length - 1]);
-  return result;
-}
 
 export default {
   name: "BallisticAnalysis",
@@ -358,7 +347,7 @@ export default {
     },
     dataColCount() {
       return this.fullData && this.fullData.length
-        ? this.fullData[0].length
+        ? this.fullData[0].length - 1
         : 0;
     },
     paramGroups() {
@@ -489,15 +478,19 @@ export default {
   },
   async mounted() {
     await this.loadRecords();
+
+    let resizeTimer = null;
     this.resizeHandler = () => {
-      // 窗口变动时重绘可见的图表
-      if (this.activeTab === "overview") {
-        if (this.chartAltInstance) this.chartAltInstance.resize();
-        if (this.chartSpdInstance) this.chartSpdInstance.resize();
-      }
-      if (this.activeTab === "telemetry") {
-        if (this.teleChartInstance) this.teleChartInstance.resize();
-      }
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (this.activeTab === "overview") {
+          if (this.chartAltInstance) this.chartAltInstance.resize();
+          if (this.chartSpdInstance) this.chartSpdInstance.resize();
+        }
+        if (this.activeTab === "telemetry") {
+          if (this.teleChartInstance) this.teleChartInstance.resize();
+        }
+      }, 100);
     };
     window.addEventListener("resize", this.resizeHandler);
   },
@@ -573,6 +566,10 @@ export default {
       this.loading = true;
       await new Promise((r) => requestAnimationFrame(r));
       try {
+        const maxNeededCol = Math.max(
+          ...TELEMETRY_COLUMNS.map((col) => col.col || 0),
+        );
+
         for (const id of newVal) {
           if (!this.multiData[id]) {
             const rawBuf = await window.electronAPI.ballistic.readFull(id);
@@ -588,10 +585,22 @@ export default {
             const c = hd[1];
             const f32 = new Float32Array(buf, 8);
             const data = new Array(r);
+
+            const extractC = Math.min(c, maxNeededCol + 1);
+
             for (let i = 0; i < r; i++) {
-              const row = new Array(c);
+              const row = new Float32Array(extractC + 1);
               const b = i * c;
-              for (let j = 0; j < c; j++) row[j] = f32[b + j];
+
+              for (let j = 0; j < extractC; j++) {
+                row[j] = f32[b + j];
+              }
+
+              if (c > 7) {
+                row[extractC] = Math.sqrt(
+                  row[5] * row[5] + row[6] * row[6] + row[7] * row[7],
+                );
+              }
               data[i] = row;
             }
             this.$set(this.multiData, id, Object.freeze(data));
@@ -606,7 +615,6 @@ export default {
         this.loading = false;
         this.$nextTick(() => {
           setTimeout(() => {
-            // 【关键修复】只在数据加载完毕后渲染可见的 Tab
             if (this.activeTab === "overview") this.drawOverviewCharts();
             if (this.activeTab === "telemetry") this.drawTelemetryChart();
           }, 50);
@@ -645,51 +653,58 @@ export default {
         this.chartSpdInstance = echarts.init(this.$refs.overviewSpd);
       }
 
+      const dataset = this.selectedRecordIds.map((id) => ({
+        id: id,
+        source: this.multiData[id],
+      }));
+
       const altSets = [];
       const spdSets = [];
 
       this.selectedRecordIds.forEach((id, i) => {
-        const d = this.multiData[id];
-        if (!d || d[0].length < 27) return;
-        const sp = downsample(d, DOWNSAMPLE_THRESHOLD);
         const isMain = id === this.activeTableRecordId;
         const color = RECORD_COLORS[i % RECORD_COLORS.length];
 
         const baseSeriesOpt = {
           name: this.getRecordDisplayName(id),
           type: "line",
+          datasetId: id,
           showSymbol: false,
           smooth: 0.2,
+          sampling: "lttb",
+          large: true,
           itemStyle: { color },
           lineStyle: {
             width: isMain ? 2 : 1,
             type: isMain ? "solid" : "dashed",
             shadowBlur: isMain ? 8 : 0,
-            shadowColor: color, // 改成 color
+            shadowColor: color,
           },
         };
 
         altSets.push({
           ...baseSeriesOpt,
-          data: sp.map((r) => {
-            const val = r[26] / 1000;
-            return [r[0], isFinite(val) ? val : null];
-          }),
+          encode: { x: 0, y: 26 },
+          tooltip: {
+            valueFormatter: (val) => (val / 1000).toFixed(2) + " km", // tooltip中转km
+          },
         });
 
-        if (d[0].length > 7) {
+        const colCount = this.multiData[id] ? this.multiData[id][0].length : 0;
+        if (colCount > 1) {
           spdSets.push({
             ...baseSeriesOpt,
-            data: sp.map((r) => {
-              const spd = Math.sqrt(r[5] * r[5] + r[6] * r[6] + r[7] * r[7]);
-              return [r[0], isFinite(spd) ? spd : null];
-            }),
+            encode: { x: 0, y: colCount - 1 },
+            tooltip: {
+              valueFormatter: (val) => val.toFixed(1) + " m/s",
+            },
           });
         }
       });
 
       const baseOption = {
         backgroundColor: "transparent",
+        dataset: dataset, // 挂载 dataset
         tooltip: {
           trigger: "axis",
           axisPointer: {
@@ -719,26 +734,49 @@ export default {
           axisLine: { lineStyle: { color: "rgba(0,229,255,0.15)" } },
           axisTick: { show: false },
         },
-        yAxis: {
-          type: "value",
-          scale: true,
-          splitLine: {
-            lineStyle: { color: "rgba(0,229,255,0.05)", type: "dashed" },
-          },
-          axisLabel: {
-            color: "#5a7a8a",
-            fontFamily: '"Space Mono", monospace',
-            fontSize: 10,
-          },
-          axisLine: { show: false },
-          axisTick: { show: false },
-        },
       };
 
-      this.chartAltInstance.setOption({ ...baseOption, series: altSets }, true);
-      this.chartSpdInstance.setOption({ ...baseOption, series: spdSets }, true);
+      this.chartAltInstance.setOption(
+        {
+          ...baseOption,
+          yAxis: {
+            type: "value",
+            scale: true,
+            axisLabel: {
+              color: "#5a7a8a",
+              fontFamily: '"Space Mono", monospace',
+              fontSize: 10,
+              formatter: (val) => val / 1000, // Y轴直转km展示
+            },
+            splitLine: {
+              lineStyle: { color: "rgba(0,229,255,0.05)", type: "dashed" },
+            },
+          },
+          series: altSets,
+        },
+        true,
+      );
 
-      // 【关键修复】立刻执行 resize 确保撑满容器
+      this.chartSpdInstance.setOption(
+        {
+          ...baseOption,
+          yAxis: {
+            type: "value",
+            scale: true,
+            axisLabel: {
+              color: "#5a7a8a",
+              fontFamily: '"Space Mono", monospace',
+              fontSize: 10,
+            },
+            splitLine: {
+              lineStyle: { color: "rgba(0,229,255,0.05)", type: "dashed" },
+            },
+          },
+          series: spdSets,
+        },
+        true,
+      );
+
       this.chartAltInstance.resize();
       this.chartSpdInstance.resize();
     },
@@ -756,13 +794,17 @@ export default {
         return;
       }
 
+      const dataset = this.selectedRecordIds.map((id) => ({
+        id: id,
+        source: this.multiData[id],
+      }));
+
       const grids = [];
       const xAxes = [];
       const yAxes = [];
       const series = [];
       const N = this.selectedParams.length;
 
-      // Calculate height percentage for each subplot based on selection count
       const heightPerGrid = 100 / N;
 
       this.selectedParams.forEach((colIdx, pIdx) => {
@@ -774,9 +816,7 @@ export default {
           ? `${colDef.label}(${colDef.unit})`
           : colDef.label;
 
-        // 【关键点】确保在这里定义好颜色，供下方的 Y轴 和 Series 使用
         const axisColor = CHART_COLORS[pIdx % 5];
-
         const top = pIdx * heightPerGrid;
         const bottom = 100 - (pIdx + 1) * heightPerGrid;
 
@@ -836,28 +876,28 @@ export default {
         });
 
         this.selectedRecordIds.forEach((id) => {
-          const d = this.multiData[id];
-          if (!d) return;
-          const sp = downsample(d, DOWNSAMPLE_THRESHOLD);
           const isMain = id === this.activeTableRecordId;
 
           series.push({
             name: `${this.getRecordDisplayName(id)} - ${colDef.label}`,
             type: "line",
+            datasetId: id,
+            encode: { x: 0, y: colIdx }, // 【优化】零拷贝抓取该列数据
             xAxisIndex: pIdx,
             yAxisIndex: pIdx,
             showSymbol: false,
+            sampling: "lttb", // 【优化】最大三角桶算法完美保留峰值
+            large: true,
             smooth: 0.1,
-            data: sp.map((r) => {
-              const val = r.length > colIdx ? r[colIdx] : null;
-              return [r[0], isFinite(val) ? val : null];
-            }),
             itemStyle: { color: axisColor },
             lineStyle: {
               width: isMain ? 2 : 1,
-              type: isMain ? "solid" : "dashed", // 动态虚实线逻辑
+              type: isMain ? "solid" : "dashed",
               shadowBlur: isMain ? 8 : 0,
               shadowColor: axisColor,
+            },
+            tooltip: {
+              valueFormatter: (val) => (val != null ? val.toPrecision(6) : val),
             },
           });
         });
@@ -866,6 +906,7 @@ export default {
       this.teleChartInstance.setOption(
         {
           backgroundColor: "transparent",
+          dataset: dataset,
           tooltip: {
             trigger: "axis",
             axisPointer: {
@@ -882,7 +923,7 @@ export default {
             },
             padding: [8, 12],
           },
-          axisPointer: { link: [{ xAxisIndex: "all" }] }, // Link all X axes for synchronized tooltip crosshair
+          axisPointer: { link: [{ xAxisIndex: "all" }] },
           grid: grids,
           xAxis: xAxes,
           yAxis: yAxes,
@@ -917,16 +958,19 @@ export default {
     },
     exportCSV() {
       if (!this.fullData) return;
-      const n = this.dataColCount;
+      const n = this.dataColCount; // 使用 dataColCount 避免把我们偷偷添加的合成速度列导出去
       const header = [];
       for (let i = 0; i < n; i++)
         header.push(
           TELEMETRY_COLUMNS[i] ? TELEMETRY_COLUMNS[i].label : `列${i}`,
         );
-      const csv = [
-        header.join(","),
-        ...this.fullData.map((r) => r.join(",")),
-      ].join("\n");
+
+      const rows = this.fullData.map((r) => {
+        // 由于原始数组变为了 Float32Array 且带了尾巴速度列，我们需要slice一下再join
+        return Array.from(r).slice(0, n).join(",");
+      });
+
+      const csv = [header.join(","), ...rows].join("\n");
       const url = URL.createObjectURL(
         new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }),
       );
@@ -1184,7 +1228,6 @@ export default {
   flex-direction: column;
   min-height: 240px;
 }
-/* 【关键修复】弃用绝对定位，改用 Flexbox 彻底解决浏览器高度坍塌缩成一条线的问题 */
 .ba-echarts-container {
   flex: 1;
   width: 100%;
