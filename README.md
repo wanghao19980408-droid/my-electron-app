@@ -1,24 +1,39 @@
-# my-electron-app
+# RocketSim - 二级火箭弹道设计与分析系统
 
-## Project setup
-```
+RocketSim 是一款基于 Electron 和 Vue 构建的专业桌面应用程序，专为航天飞行器（特别是二级火箭）的弹道设计、遥测数据处理与三维可视化分析而开发。
+
+## ✨ 核心特性
+
+- **多维度弹道分析**: 支持对多次飞行/仿真记录的参数进行叠图对比分析（如高度、动压、马赫数、过载等）。
+- **智能交互图表**: 内置主/次弹道动态高亮机制，主弹道实线显示，对比弹道自动降级为虚线，视觉层级清晰。
+- **海量数据流畅渲染**: 具备强大的遥测数据解析能力，内置数据降采样（Downsample）优化算法，确保十万级数据点视图下的极速响应。
+- **工程化管理**: 创新的“文件柜式”导航交互设计，让多项目、多测试批次的数据管理更加符合直觉。
+- **便捷数据导出**: 支持灵活框选时间范围，并可一键将遥测详单及比对数据导出为 CSV 格式，便于接入 MATLAB 或 Python 进行二次分析。
+
+## 🛠️ 技术栈
+
+- **前端框架**: Vue.js + Vuex + Vue-Router
+- **桌面端引擎**: Electron
+- **数据可视化 (2D)**: ECharts
+- **构建工具**: Vue CLI, electron-builder
+
+## ⚙️ 环境依赖
+
+- **Node.js**: 建议版本 `v16.x` 或 `v18.x` (请勿使用过于激进的最新版本，以避免跨平台编译原生模块时出现 C++ 依赖错误)
+- **包管理器**: `npm` 或 `yarn`
+
+## 📦 快速开始
+
+### 1. 克隆与安装
+
+```bash
+# 1. 进入项目根目录
+cd my-electron-app
+
+# 2. 安装所有依赖包
 npm install
+# 3.启动 Vue 渲染进程
+npm run electron:serve
+# 4.编译并打包出独立的跨平台可执行文件
+npm run electron:build
 ```
-
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
-
-### Compiles and minifies for production
-```
-npm run build
-```
-
-### Lints and fixes files
-```
-npm run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).

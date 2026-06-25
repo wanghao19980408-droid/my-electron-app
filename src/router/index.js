@@ -1,29 +1,50 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import Vue from "vue";
+import VueRouter from "vue-router";
+import ParameterSettings from "@/views/ParameterSettings.vue";
+import ProjectManagement from "@/views/ProjectManagement.vue";
+import Login from "@/views/Login.vue";
+import store from "@/store";
+import CesiumTest from "@/views/CesiumTest.vue";
+import FlightProfile from "@/views/FlightProfile.vue";
 
-Vue.use(VueRouter)
+Vue.use(VueRouter);
 
 const routes = [
+  { path: "/", redirect: "/project" },
   {
-    path: '/',
-    name: 'home',
-    component: HomeView
+    path: "/login",
+    name: "LoginPage",
+    component: Login,
+    meta: { public: true },
   },
+  { path: "/project", name: "Project", component: ProjectManagement },
+  { path: "/parameters", name: "Parameters", component: ParameterSettings },
+  { path: "/cesium-test", component: CesiumTest },
+  { path: "/flight-profile", name: "FlightProfile", component: FlightProfile },
   {
-    path: '/about',
-    name: 'about',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
-  }
-]
+    path: "/ballistic-analysis",
+    name: "BallisticAnalysis",
+    component: () =>
+      import(
+        /* webpackChunkName: "ballistic-analysis" */ "@/views/BallisticAnalysis.vue"
+      ),
+    meta: {
+      title: "ballisticAnalysis",
+      icon: "el-icon-data-analysis",
+      requiresAuth: true,
+    },
+  },
+];
 
 const router = new VueRouter({
-  mode: 'history',
-  base: process.env.BASE_URL,
-  routes
-})
+  routes,
+});
 
-export default router
+router.beforeEach((to, _from, next) => {
+  if (to.meta.public || store.state.isLoggedIn) {
+    next();
+  } else {
+    next("/login");
+  }
+});
+export default router;
