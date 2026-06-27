@@ -686,7 +686,8 @@ export default {
           ...baseSeriesOpt,
           encode: { x: 0, y: 26 },
           tooltip: {
-            valueFormatter: (val) => (val / 1000).toFixed(2) + " km", // tooltip中转km
+            valueFormatter: (val) =>
+              val != null ? (val / 1000).toFixed(2) + " km" : "—",
           },
         });
 
@@ -696,7 +697,8 @@ export default {
             ...baseSeriesOpt,
             encode: { x: 0, y: colCount - 1 },
             tooltip: {
-              valueFormatter: (val) => val.toFixed(1) + " m/s",
+              valueFormatter: (val) =>
+                val != null ? val.toFixed(1) + " m/s" : "—",
             },
           });
         }
@@ -704,13 +706,14 @@ export default {
 
       const baseOption = {
         backgroundColor: "transparent",
-        dataset: dataset, // 挂载 dataset
+        dataset: dataset,
         tooltip: {
           trigger: "axis",
           axisPointer: {
             type: "cross",
-            lineStyle: { color: "rgba(0, 229, 255, 0.4)", type: "dashed" },
-            crossStyle: { color: "rgba(0, 229, 255, 0.4)", type: "dashed" },
+            // 【修复点】：配置XY双向白虚线十字准星
+            lineStyle: { color: "rgba(255, 255, 255, 0.5)", type: "dashed" },
+            crossStyle: { color: "rgba(255, 255, 255, 0.5)", type: "dashed" },
           },
           backgroundColor: "rgba(3, 8, 18, 0.85)",
           borderColor: "rgba(0, 229, 255, 0.4)",
@@ -722,7 +725,7 @@ export default {
           },
           padding: [8, 12],
         },
-        grid: { left: 45, right: 15, top: 15, bottom: 25, containLabel: false },
+        grid: { left: 45, right: 15, top: 15, bottom: 35, containLabel: false },
         xAxis: {
           type: "value",
           splitLine: { show: false },
@@ -734,6 +737,25 @@ export default {
           axisLine: { lineStyle: { color: "rgba(0,229,255,0.15)" } },
           axisTick: { show: false },
         },
+        dataZoom: [
+          { type: "inside", xAxisIndex: "all" },
+          {
+            type: "slider",
+            xAxisIndex: "all",
+            height: 20,
+            bottom: 4,
+            left: "8%",
+            right: "5%",
+            borderColor: "transparent",
+            backgroundColor: "rgba(0, 229, 255, 0.05)",
+            fillerColor: "rgba(0, 229, 255, 0.15)",
+            handleStyle: { color: "#00e5ff" },
+            textStyle: { color: "#5a7a8a" },
+            labelFormatter: function (val) {
+              return val.toFixed(1) + " s";
+            },
+          },
+        ],
       };
 
       this.chartAltInstance.setOption(
@@ -746,7 +768,7 @@ export default {
               color: "#5a7a8a",
               fontFamily: '"Space Mono", monospace',
               fontSize: 10,
-              formatter: (val) => val / 1000, // Y轴直转km展示
+              formatter: (val) => val / 1000,
             },
             splitLine: {
               lineStyle: { color: "rgba(0,229,255,0.05)", type: "dashed" },
@@ -819,18 +841,20 @@ export default {
           unit: "",
         };
         const yName = colDef.unit
-          ? `${colDef.shortName}(${colDef.unit})`
-          : colDef.shortName;
+          ? `${colDef.label}(${colDef.unit})`
+          : colDef.label;
         const axisColor = CHART_COLORS[pIdx % 5];
+
+        const unitSuffix = colDef.unit ? ` ${colDef.unit}` : "";
 
         const r = Math.floor(pIdx / cols);
         const c = pIdx % cols;
 
         const gridWidth = cols === 1 ? "92%" : "43%";
-        const gridHeight = rows === 1 ? "75%" : "32%";
+        const gridHeight = rows === 1 ? "72%" : "30%";
 
         const left = c === 0 ? "4%" : "53%";
-        const top = r === 0 ? "10%" : "56%";
+        const top = r === 0 ? "10%" : "54%";
 
         const isBottomRow = pIdx + cols >= N;
 
@@ -899,7 +923,7 @@ export default {
           const isMain = id === this.activeTableRecordId;
 
           series.push({
-            name: `${this.getRecordDisplayName(id)} - ${colDef.shortName}`,
+            name: `${this.getRecordDisplayName(id)} - ${colDef.label}`,
             type: "line",
             datasetId: id,
             encode: { x: 0, y: colIdx },
@@ -926,7 +950,8 @@ export default {
                 }
               : null,
             tooltip: {
-              valueFormatter: (val) => (val != null ? val.toPrecision(6) : "—"),
+              valueFormatter: (val) =>
+                val != null ? val.toPrecision(6) + unitSuffix : "—",
             },
           });
         });
@@ -940,8 +965,12 @@ export default {
             trigger: "axis",
             axisPointer: {
               type: "cross",
-              label: { backgroundColor: "#00e5ff", color: "#000" },
-              lineStyle: { color: "rgba(0, 229, 255, 0.5)", type: "dashed" },
+              label: {
+                backgroundColor: "rgba(0, 229, 255, 0.8)",
+                color: "#000",
+              },
+              lineStyle: { color: "rgba(255, 255, 255, 0.5)", type: "dashed" },
+              crossStyle: { color: "rgba(255, 255, 255, 0.5)", type: "dashed" },
             },
             backgroundColor: "rgba(10, 15, 26, 0.9)",
             borderColor: "rgba(0, 229, 255, 0.3)",
@@ -958,13 +987,18 @@ export default {
             {
               type: "slider",
               xAxisIndex: "all",
-              height: 16,
-              bottom: 2,
-              borderColor: "transparent",
-              backgroundColor: "rgba(0, 229, 255, 0.05)",
-              fillerColor: "rgba(0, 229, 255, 0.15)",
+              height: 24,
+              bottom: 4,
+              left: "4%",
+              right: "4%",
+              borderColor: "rgba(0, 229, 255, 0.2)",
+              backgroundColor: "rgba(0, 15, 30, 0.5)",
+              fillerColor: "rgba(0, 229, 255, 0.2)",
               handleStyle: { color: "#00e5ff" },
-              textStyle: { color: "#5a7a8a" },
+              textStyle: { color: "#00e5ff" },
+              labelFormatter: function (value) {
+                return value.toFixed(1) + " s";
+              },
             },
           ],
           axisPointer: { link: [{ xAxisIndex: "all" }] },
@@ -1002,7 +1036,7 @@ export default {
     },
     exportCSV() {
       if (!this.fullData) return;
-      const n = this.dataColCount; // 使用 dataColCount 避免把我们偷偷添加的合成速度列导出去
+      const n = this.dataColCount;
       const header = [];
       for (let i = 0; i < n; i++)
         header.push(
@@ -1010,7 +1044,6 @@ export default {
         );
 
       const rows = this.fullData.map((r) => {
-        // 由于原始数组变为了 Float32Array 且带了尾巴速度列，我们需要slice一下再join
         return Array.from(r).slice(0, n).join(",");
       });
 
