@@ -780,7 +780,11 @@ export default {
       this.chartAltInstance.resize();
       this.chartSpdInstance.resize();
     },
-
+    hexToRgba(hex, alpha = 1) {
+      if (!hex) return "rgba(0,0,0,1)";
+      const [r, g, b] = hex.match(/\w\w/g).map((x) => parseInt(x, 16));
+      return `rgba(${r},${g},${b},${alpha})`;
+    },
     drawTelemetryChart() {
       if (!this.$refs.teleChart) return;
       let chartTele = echarts.getInstanceByDom(this.$refs.teleChart);
@@ -799,13 +803,15 @@ export default {
         source: this.multiData[id],
       }));
 
+      const N = this.selectedParams.length;
+
+      const cols = N <= 2 ? 1 : 2;
+      const rows = Math.ceil(N / cols);
+
       const grids = [];
       const xAxes = [];
       const yAxes = [];
       const series = [];
-      const N = this.selectedParams.length;
-
-      const heightPerGrid = 100 / N;
 
       this.selectedParams.forEach((colIdx, pIdx) => {
         const colDef = TELEMETRY_COLUMNS[colIdx] || {
@@ -813,19 +819,31 @@ export default {
           unit: "",
         };
         const yName = colDef.unit
-          ? `${colDef.label}(${colDef.unit})`
-          : colDef.label;
-
+          ? `${colDef.shortName}(${colDef.unit})`
+          : colDef.shortName;
         const axisColor = CHART_COLORS[pIdx % 5];
-        const top = pIdx * heightPerGrid;
-        const bottom = 100 - (pIdx + 1) * heightPerGrid;
+
+        const r = Math.floor(pIdx / cols);
+        const c = pIdx % cols;
+
+        const gridWidth = cols === 1 ? "92%" : "43%";
+        const gridHeight = rows === 1 ? "75%" : "32%";
+
+        const left = c === 0 ? "4%" : "53%";
+        const top = r === 0 ? "10%" : "56%";
+
+        const isBottomRow = pIdx + cols >= N;
 
         grids.push({
-          left: 20,
-          right: 30,
-          top: `${top + (pIdx === 0 ? 6 : 8)}%`,
-          bottom: `${bottom + (pIdx === N - 1 ? 8 : 2)}%`,
+          left: left,
+          top: top,
+          width: gridWidth,
+          height: gridHeight,
           containLabel: true,
+          show: true,
+          backgroundColor: "rgba(0, 229, 255, 0.015)",
+          borderColor: "rgba(0, 229, 255, 0.08)",
+          borderWidth: 1,
         });
 
         xAxes.push({
@@ -833,16 +851,13 @@ export default {
           type: "value",
           splitLine: { show: false },
           axisLabel: {
-            show: pIdx === N - 1,
+            show: isBottomRow,
             color: "#5a7a8a",
             fontSize: 10,
             fontFamily: '"Space Mono", monospace',
           },
-          axisLine: {
-            show: true,
-            lineStyle: { color: "rgba(0,229,255,0.15)" },
-          },
-          axisTick: { show: pIdx === N - 1 },
+          axisLine: { show: true, lineStyle: { color: "rgba(0,229,255,0.2)" } },
+          axisTick: { show: isBottomRow },
         });
 
         yAxes.push({
@@ -852,23 +867,28 @@ export default {
           nameLocation: "end",
           nameTextStyle: {
             color: axisColor,
-            fontSize: 11,
+            fontSize: 12,
+            fontWeight: "bold",
             padding: [0, 0, 4, 0],
             align: "left",
           },
-          splitNumber: 3,
+          splitNumber: 4,
           scale: true,
           axisLine: { show: true, lineStyle: { color: axisColor } },
           splitLine: {
             show: true,
-            lineStyle: { color: "rgba(0,229,255,0.05)", type: "dashed" },
+            lineStyle: { color: "rgba(255,255,255,0.03)", type: "dashed" },
           },
           axisLabel: {
             color: axisColor,
-            fontSize: 10,
+            fontSize: 9,
             fontFamily: '"Space Mono", monospace',
             formatter: (value) => {
-              if (Math.abs(value) >= 100000) return value.toExponential(2);
+              if (
+                Math.abs(value) >= 100000 ||
+                (Math.abs(value) < 0.001 && value !== 0)
+              )
+                return value.toExponential(2);
               return value;
             },
           },
@@ -879,25 +899,34 @@ export default {
           const isMain = id === this.activeTableRecordId;
 
           series.push({
-            name: `${this.getRecordDisplayName(id)} - ${colDef.label}`,
+            name: `${this.getRecordDisplayName(id)} - ${colDef.shortName}`,
             type: "line",
             datasetId: id,
-            encode: { x: 0, y: colIdx }, // 【优化】零拷贝抓取该列数据
+            encode: { x: 0, y: colIdx },
             xAxisIndex: pIdx,
             yAxisIndex: pIdx,
             showSymbol: false,
-            sampling: "lttb", // 【优化】最大三角桶算法完美保留峰值
+            sampling: "lttb",
             large: true,
             smooth: 0.1,
             itemStyle: { color: axisColor },
             lineStyle: {
-              width: isMain ? 2 : 1,
+              width: isMain ? 2 : 1.2,
               type: isMain ? "solid" : "dashed",
-              shadowBlur: isMain ? 8 : 0,
+              shadowBlur: isMain ? 6 : 0,
               shadowColor: axisColor,
+              opacity: isMain ? 1 : 0.5,
             },
+            areaStyle: isMain
+              ? {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: this.hexToRgba(axisColor, 0.15) },
+                    { offset: 1, color: this.hexToRgba(axisColor, 0.0) },
+                  ]),
+                }
+              : null,
             tooltip: {
-              valueFormatter: (val) => (val != null ? val.toPrecision(6) : val),
+              valueFormatter: (val) => (val != null ? val.toPrecision(6) : "—"),
             },
           });
         });
@@ -911,18 +940,33 @@ export default {
             trigger: "axis",
             axisPointer: {
               type: "cross",
-              lineStyle: { color: "rgba(0, 229, 255, 0.4)", type: "dashed" },
+              label: { backgroundColor: "#00e5ff", color: "#000" },
+              lineStyle: { color: "rgba(0, 229, 255, 0.5)", type: "dashed" },
             },
-            backgroundColor: "rgba(3, 8, 18, 0.85)",
-            borderColor: "rgba(0, 229, 255, 0.4)",
+            backgroundColor: "rgba(10, 15, 26, 0.9)",
+            borderColor: "rgba(0, 229, 255, 0.3)",
             borderWidth: 1,
             textStyle: {
               color: "#e0f4ff",
               fontSize: 12,
               fontFamily: '"Space Mono", monospace',
             },
-            padding: [8, 12],
+            padding: [10, 14],
           },
+          dataZoom: [
+            { type: "inside", xAxisIndex: "all" },
+            {
+              type: "slider",
+              xAxisIndex: "all",
+              height: 16,
+              bottom: 2,
+              borderColor: "transparent",
+              backgroundColor: "rgba(0, 229, 255, 0.05)",
+              fillerColor: "rgba(0, 229, 255, 0.15)",
+              handleStyle: { color: "#00e5ff" },
+              textStyle: { color: "#5a7a8a" },
+            },
+          ],
           axisPointer: { link: [{ xAxisIndex: "all" }] },
           grid: grids,
           xAxis: xAxes,

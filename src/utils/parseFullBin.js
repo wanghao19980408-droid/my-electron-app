@@ -1,7 +1,3 @@
-/**
- * 解析 full.bin 的 ArrayBuffer
- * 二进制格式: [uint32 rows][uint32 cols][float32 × rows × cols]
- */
 export function parseFullBinBuffer(arrayBuffer) {
   if (!arrayBuffer || arrayBuffer.byteLength < 8) {
     throw new Error("无效的二进制数据");

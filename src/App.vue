@@ -548,8 +548,7 @@ export default {
     timer: null,
     hwTimer: null,
     isBooting: false,
-    // 小地球拖拽
-    earthPos: null, // { x, y }；null 表示使用默认右下位置
+    earthPos: null,
     isDragging: false,
   }),
 
@@ -588,7 +587,7 @@ export default {
       const list = [];
       list.push({
         label: this.$t("project.optParams.launchAzimuth"),
-        unit: "°",
+        unit: "deg",
         val: fmt(inp[0]),
       });
       list.push({
@@ -600,7 +599,7 @@ export default {
       });
       list.push({
         label: this.$t("project.optParams.maxNegAttackAngle"),
-        unit: "°",
+        unit: "deg",
         val: fmt(inp[2]),
       });
       for (let i = 3; i < (inp.length || 0); i++) {
@@ -627,7 +626,7 @@ export default {
         { label: this.$t("params.labels.ecc"), unit: "", val: fmt(out[1]) },
         {
           label: this.$t("params.labels.trackInc"),
-          unit: "°",
+          unit: "deg",
           val: fmt(out[2]),
         },
       ];
